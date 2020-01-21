@@ -22,7 +22,9 @@ namespace AsyncAwaitPain.Lib.Test
         public void Exception_Abandoned()
         {
             // Succeeds - Exception Lost
+#pragma warning disable 4014
             ThrowsException();
+#pragma warning restore 4014
         }
 
         [TestMethod]
