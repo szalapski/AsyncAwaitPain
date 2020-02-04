@@ -15,6 +15,7 @@ using Microsoft.Owin.Security.OAuth;
 using AsyncAwaitPain.WebApi.Models;
 using AsyncAwaitPain.WebApi.Providers;
 using AsyncAwaitPain.WebApi.Results;
+using System.Linq;
 
 namespace AsyncAwaitPain.WebApi.Controllers
 {
@@ -74,16 +75,12 @@ namespace AsyncAwaitPain.WebApi.Controllers
             IdentityUser user = await UserManager.FindByIdAsync(User.Identity.GetUserId());
             if (user == null) return null;
 
-            List<UserLoginInfoViewModel> logins = new List<UserLoginInfoViewModel>();
-
-            foreach (IdentityUserLogin linkedAccount in user.Logins)
+            List<UserLoginInfoViewModel> logins = user.Logins.Select(linkedAccount => new UserLoginInfoViewModel()
             {
-                logins.Add(new UserLoginInfoViewModel
-                {
-                    LoginProvider = linkedAccount.LoginProvider,
-                    ProviderKey = linkedAccount.ProviderKey
-                });
-            }
+                LoginProvider = linkedAccount.LoginProvider,
+                ProviderKey = linkedAccount.ProviderKey
+            }).ToList();
+
 
             if (user.PasswordHash != null)
             {
@@ -259,7 +256,7 @@ namespace AsyncAwaitPain.WebApi.Controllers
             const int strengthInBits = 256;
             string state = generateState ? RandomOAuthStateGenerator.Generate(strengthInBits) : null;
 
-            foreach (AuthenticationDescription description in descriptions)
+            foreach (AuthenticationDescription description in descriptions.Where(d => d.Caption.StartsWith("foo")))
             {
                 ExternalLoginViewModel login = MakeExternalLoginViewModel(Request.RequestUri, returnUrl, state, description);
                 logins.Add(login);
