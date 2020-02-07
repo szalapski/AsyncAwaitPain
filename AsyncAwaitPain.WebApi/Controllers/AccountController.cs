@@ -9,6 +9,7 @@ using Microsoft.Owin.Security.Cookies;
 using Microsoft.Owin.Security.OAuth;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -159,9 +160,9 @@ namespace AsyncAwaitPain.WebApi.Controllers
 
             AuthenticationTicket ticket = AccessTokenFormat.Unprotect(model.ExternalAccessToken);
 
-            if (ticket == null || ticket.Identity == null || (ticket.Properties != null
-                && ticket.Properties.ExpiresUtc.HasValue
-                && ticket.Properties.ExpiresUtc.Value < DateTimeOffset.UtcNow))
+            if (ticket?.Identity == null || 
+                (ticket.Properties?.ExpiresUtc != null &&
+                    ticket.Properties.ExpiresUtc.Value < DateTimeOffset.UtcNow))
             {
                 return BadRequest("External login failure.");
             }
@@ -276,39 +277,21 @@ namespace AsyncAwaitPain.WebApi.Controllers
         public IEnumerable<ExternalLoginViewModel> GetExternalLogins(string returnUrl, bool generateState = false)
         {
             IEnumerable<AuthenticationDescription> descriptions = Authentication.GetExternalAuthenticationTypes();
-            List<ExternalLoginViewModel> logins = new List<ExternalLoginViewModel>();
 
-            string state;
+            const int strengthInBits = 256;
+            string state = generateState ? RandomOAuthStateGenerator.Generate(strengthInBits) : null;
 
-            if (generateState)
-            {
-                const int strengthInBits = 256;
-                state = RandomOAuthStateGenerator.Generate(strengthInBits);
-            }
-            else
-            {
-                state = null;
-            }
-
-            foreach (AuthenticationDescription description in descriptions)
-            {
-                ExternalLoginViewModel login = new ExternalLoginViewModel
-                {
-                    Name = description.Caption,
-                    Url = Url.Route("ExternalLogin", new
-                    {
-                        provider = description.AuthenticationType,
-                        response_type = "token",
-                        client_id = Startup.PublicClientId,
-                        redirect_uri = new Uri(Request.RequestUri, returnUrl).AbsoluteUri,
-                        state
-                    }),
-                    State = state
-                };
-                logins.Add(login);
-            }
-
-            return logins;
+            return descriptions.Select(description => new ExternalLoginViewModel {
+                Name = description.Caption,
+                Url = Url.Route("ExternalLogin", new {
+                    provider = description.AuthenticationType,
+                    response_type = "token",
+                    client_id = Startup.PublicClientId,
+                    redirect_uri = new Uri(Request.RequestUri, returnUrl).AbsoluteUri,
+                    state
+                }),
+                State = state
+            });
         }
 
         // POST api/Account/Register
@@ -359,11 +342,8 @@ namespace AsyncAwaitPain.WebApi.Controllers
             }
 
             result = await UserManager.AddLoginAsync(user.Id, info.Login);
-            if (!result.Succeeded)
-            {
-                return GetErrorResult(result); 
-            }
-            return Ok();
+
+            return result.Succeeded ? Ok() : GetErrorResult(result);
         }
 
         protected override void Dispose(bool disposing)
@@ -379,10 +359,8 @@ namespace AsyncAwaitPain.WebApi.Controllers
 
         #region Helpers
 
-        private IAuthenticationManager Authentication
-        {
-            get { return Request.GetOwinContext().Authentication; }
-        }
+        private IAuthenticationManager Authentication => 
+            Request.GetOwinContext().Authentication;
 
         private IHttpActionResult GetErrorResult(IdentityResult result)
         {
@@ -391,32 +369,29 @@ namespace AsyncAwaitPain.WebApi.Controllers
                 return InternalServerError();
             }
 
-            if (!result.Succeeded)
+            if (result.Succeeded) return null;
+
+            if (result.Errors != null)
             {
-                if (result.Errors != null)
+                foreach (string error in result.Errors)
                 {
-                    foreach (string error in result.Errors)
-                    {
-                        ModelState.AddModelError("", error);
-                    }
+                    ModelState.AddModelError("", error);
                 }
-
-                if (ModelState.IsValid)
-                {
-                    // No ModelState errors are available to send, so just return an empty BadRequest.
-                    return BadRequest();
-                }
-
-                return BadRequest(ModelState);
             }
 
-            return null;
+            if (ModelState.IsValid)
+            {
+                // No ModelState errors are available to send, so just return an empty BadRequest.
+                return BadRequest();
+            }
+
+            return BadRequest(ModelState);
         }
 
         private class ExternalLoginData
         {
-            public string LoginProvider { get; set; }
-            public string ProviderKey { get; set; }
+            public string LoginProvider { get; private set; }
+            public string ProviderKey { get; private set; }
             public string UserName { get; set; }
 
             public IList<Claim> GetClaims()
@@ -434,15 +409,10 @@ namespace AsyncAwaitPain.WebApi.Controllers
 
             public static ExternalLoginData FromIdentity(ClaimsIdentity identity)
             {
-                if (identity == null)
-                {
-                    return null;
-                }
-
-                Claim providerKeyClaim = identity.FindFirst(ClaimTypes.NameIdentifier);
+                Claim providerKeyClaim = identity?.FindFirst(ClaimTypes.NameIdentifier);
 
                 if (providerKeyClaim == null || String.IsNullOrEmpty(providerKeyClaim.Issuer)
-                    || String.IsNullOrEmpty(providerKeyClaim.Value))
+                                             || String.IsNullOrEmpty(providerKeyClaim.Value))
                 {
                     return null;
                 }
@@ -463,7 +433,7 @@ namespace AsyncAwaitPain.WebApi.Controllers
 
         private static class RandomOAuthStateGenerator
         {
-            private static RandomNumberGenerator _random = new RNGCryptoServiceProvider();
+            private static readonly RandomNumberGenerator _random = new RNGCryptoServiceProvider();
 
             public static string Generate(int strengthInBits)
             {
@@ -471,7 +441,8 @@ namespace AsyncAwaitPain.WebApi.Controllers
 
                 if (strengthInBits % bitsPerByte != 0)
                 {
-                    throw new ArgumentException("strengthInBits must be evenly divisible by 8.", "strengthInBits");
+                    throw new ArgumentException("strengthInBits must be evenly divisible by 8.", 
+                        nameof(strengthInBits));
                 }
 
                 int strengthInBytes = strengthInBits / bitsPerByte;
