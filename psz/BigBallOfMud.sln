@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29613.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BigBallOfMud", "BigBallOfMud.csproj", "{99317683-5511-496D-B649-6FDE6DAE393B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NewFolder1", "NewFolder1", "{5B480BC4-2D18-43A1-BDC3-F36C7CE5B0D2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{105D69DD-24FE-4BF7-8B48-A7695AED82EA}"
+	ProjectSection(SolutionItems) = preProject
+		..\.gitignore = ..\.gitignore
+		..\LICENSE = ..\LICENSE
+		..\links.html = ..\links.html
+		ProgramNotes.md = ProgramNotes.md
+		..\README.md = ..\README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{99317683-5511-496D-B649-6FDE6DAE393B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99317683-5511-496D-B649-6FDE6DAE393B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99317683-5511-496D-B649-6FDE6DAE393B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99317683-5511-496D-B649-6FDE6DAE393B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DB006315-FE72-44DB-AB44-2A1DFFB1667E}
+	EndGlobalSection
+EndGlobal
