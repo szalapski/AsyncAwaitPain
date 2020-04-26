@@ -16,6 +16,7 @@ using Microsoft.Owin.Security.OAuth;
 using AsyncAwaitPain.WebApi.Models;
 using AsyncAwaitPain.WebApi.Providers;
 using AsyncAwaitPain.WebApi.Results;
+using System.Linq;
 
 namespace AsyncAwaitPain.WebApi.Controllers
 {
@@ -283,39 +284,24 @@ namespace AsyncAwaitPain.WebApi.Controllers
         public IEnumerable<ExternalLoginViewModel> GetExternalLogins(string returnUrl, bool generateState = false)
         {
             IEnumerable<AuthenticationDescription> descriptions = Authentication.GetExternalAuthenticationTypes();
-            List<ExternalLoginViewModel> logins = new List<ExternalLoginViewModel>();
+           
+            const int strengthInBits = 256;
+            string state = generateState ? RandomOAuthStateGenerator.Generate(strengthInBits) : null;
 
-            string state;
-
-            if (generateState)
+            return descriptions.Select(description => new ExternalLoginViewModel
             {
-                const int strengthInBits = 256;
-                state = RandomOAuthStateGenerator.Generate(strengthInBits);
-            }
-            else
-            {
-                state = null;
-            }
-
-            foreach (AuthenticationDescription description in descriptions)
-            {
-                ExternalLoginViewModel login = new ExternalLoginViewModel
+                Name = description.Caption,
+                Url = Url.Route("ExternalLogin", new
                 {
-                    Name = description.Caption,
-                    Url = Url.Route("ExternalLogin", new
-                    {
-                        provider = description.AuthenticationType,
-                        response_type = "token",
-                        client_id = Startup.PublicClientId,
-                        redirect_uri = new Uri(Request.RequestUri, returnUrl).AbsoluteUri,
-                        state = state
-                    }),
-                    State = state
-                };
-                logins.Add(login);
-            }
+                    provider = description.AuthenticationType,
+                    response_type = "token",
+                    client_id = Startup.PublicClientId,
+                    redirect_uri = new Uri(Request.RequestUri, returnUrl).AbsoluteUri,
+                    state
+                }),
+                State = state
+            });
 
-            return logins;
         }
 
         // POST api/Account/Register
@@ -332,12 +318,7 @@ namespace AsyncAwaitPain.WebApi.Controllers
 
             IdentityResult result = await UserManager.CreateAsync(user, model.Password);
 
-            if (!result.Succeeded)
-            {
-                return GetErrorResult(result);
-            }
-
-            return Ok();
+            return result.Succeeded ? Ok() : GetErrorResult(result);
         }
 
         // POST api/Account/RegisterExternal
@@ -393,31 +374,18 @@ namespace AsyncAwaitPain.WebApi.Controllers
 
         private IHttpActionResult GetErrorResult(IdentityResult result)
         {
-            if (result == null)
+            if (result == null) return InternalServerError();
+
+            if (result.Succeeded) return null;
+
+            if (result.Errors != null)
             {
-                return InternalServerError();
+                foreach (string error in result.Errors) ModelState.AddModelError("", error);
             }
 
-            if (!result.Succeeded)
-            {
-                if (result.Errors != null)
-                {
-                    foreach (string error in result.Errors)
-                    {
-                        ModelState.AddModelError("", error);
-                    }
-                }
-
-                if (ModelState.IsValid)
-                {
-                    // No ModelState errors are available to send, so just return an empty BadRequest.
-                    return BadRequest();
-                }
-
-                return BadRequest(ModelState);
-            }
-
-            return null;
+            // No ModelState errors are available to send, so just return an empty BadRequest.
+            if (ModelState.IsValid) return BadRequest();
+            return BadRequest(ModelState);
         }
 
         private class ExternalLoginData
@@ -448,13 +416,10 @@ namespace AsyncAwaitPain.WebApi.Controllers
 
                 Claim providerKeyClaim = identity.FindFirst(ClaimTypes.NameIdentifier);
 
-                if (providerKeyClaim == null || String.IsNullOrEmpty(providerKeyClaim.Issuer)
-                    || String.IsNullOrEmpty(providerKeyClaim.Value))
-                {
-                    return null;
-                }
-
-                if (providerKeyClaim.Issuer == ClaimsIdentity.DefaultIssuer)
+                if (providerKeyClaim == null 
+                    || String.IsNullOrEmpty(providerKeyClaim.Issuer)
+                    || String.IsNullOrEmpty(providerKeyClaim.Value) 
+                    || providerKeyClaim.Issuer == ClaimsIdentity.DefaultIssuer)
                 {
                     return null;
                 }
