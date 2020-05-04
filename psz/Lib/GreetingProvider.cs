@@ -9,7 +9,7 @@ namespace BigBallOfMud.Lib
             this.versionProvider = versionProvider ?? throw new System.ArgumentNullException(nameof(versionProvider));
         }
 
-        /* Refactor static/ dependency into proper DI in 7 steps:
+        /* Refactor static or any hard dependency into proper DI in 7 steps:
            1. (static only) Sequester the untestable/uninjectable code into a class containing
             only the tightly-coupled code
                 a. extract instance method
@@ -31,7 +31,6 @@ namespace BigBallOfMud.Lib
         {
             string version = versionProvider.GetVersion();
             string parity = int.Parse(version.Split('.').Last()) % 2 == 0 ? "even" : "odd";
-            var foo = new VersionProvider();
             return $"Hello TCDNUG, this is version {version}.  What an {parity} version!";
         }
     }
