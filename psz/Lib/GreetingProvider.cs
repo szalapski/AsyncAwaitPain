@@ -1,10 +1,14 @@
-﻿using System.IO;
-using System.Linq;
+﻿using System.Linq;
 
 namespace BigBallOfMud.Lib
 {
     public class GreetingProvider : IGreetingProvider
     {
+        public GreetingProvider(IVersionProvider versionProvider)
+        {
+            this.versionProvider = versionProvider ?? throw new System.ArgumentNullException(nameof(versionProvider));
+        }
+
         /* Refactor static/ dependency into proper DI in 7 steps:
            1. (static only) Sequester the untestable/uninjectable code into a class containing
             only the tightly-coupled code
@@ -21,10 +25,13 @@ namespace BigBallOfMud.Lib
             N. clean up code (always)        
         */
 
+        private readonly IVersionProvider versionProvider;
+
         public string GetGreeting()
         {
-            string version = File.ReadAllText("version.txt");
+            string version = versionProvider.GetVersion();
             string parity = int.Parse(version.Split('.').Last()) % 2 == 0 ? "even" : "odd";
+            var foo = new VersionProvider();
             return $"Hello TCDNUG, this is version {version}.  What an {parity} version!";
         }
     }

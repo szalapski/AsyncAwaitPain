@@ -279,26 +279,30 @@ namespace AsyncAwaitPain.WebApi.Controllers
         public IEnumerable<ExternalLoginViewModel> GetExternalLogins(string returnUrl, bool generateState = false)
         {
             IEnumerable<AuthenticationDescription> descriptions = Authentication.GetExternalAuthenticationTypes();
-            List<ExternalLoginViewModel> logins = new List<ExternalLoginViewModel>();
 
             const int strengthInBits = 256;
             string state = generateState ? RandomOAuthStateGenerator.Generate(strengthInBits) : null;
 
-            var viewModels = descriptions.Select(description => new ExternalLoginViewModel {
-                Name = description.Caption,
-                Url = Url.Route("ExternalLogin", new {
-                    provider = description.AuthenticationType,
-                    response_type = "token",
-                    client_id = Startup.PublicClientId,
-                    redirect_uri = new Uri(Request.RequestUri, returnUrl).AbsoluteUri,
-                    state
-                }),
-                State = state
-            });
+            return MakeLoginViewModels(returnUrl, descriptions, state);
+        }
 
-            logins.AddRange(viewModels);
-
-            return logins;
+        private IEnumerable<ExternalLoginViewModel> MakeLoginViewModels(
+            string returnUrl,
+            IEnumerable<AuthenticationDescription> descriptions,
+            string state)
+        {
+            return descriptions
+                .Select(description => new ExternalLoginViewModel {
+                    Name = description.Caption,
+                    Url = Url.Route("ExternalLogin", new {
+                        provider = description.AuthenticationType,
+                        response_type = "token",
+                        client_id = Startup.PublicClientId,
+                        redirect_uri = new Uri(Request.RequestUri, returnUrl).AbsoluteUri,
+                        state
+                    }),
+                    State = state
+                });
         }
 
         // POST api/Account/Register
@@ -376,31 +380,24 @@ namespace AsyncAwaitPain.WebApi.Controllers
 
         private IHttpActionResult GetErrorResult(IdentityResult result)
         {
-            if (result == null)
+            if (result == null) return InternalServerError();
+            if (result.Succeeded) return null;
+
+            if (result.Errors != null)
             {
-                return InternalServerError();
+                foreach (string error in result.Errors)
+                {
+                    ModelState.AddModelError("", error);
+                }
             }
 
-            if (!result.Succeeded)
+            if (ModelState.IsValid)
             {
-                if (result.Errors != null)
-                {
-                    foreach (string error in result.Errors)
-                    {
-                        ModelState.AddModelError("", error);
-                    }
-                }
-
-                if (ModelState.IsValid)
-                {
-                    // No ModelState errors are available to send, so just return an empty BadRequest.
-                    return BadRequest();
-                }
-
-                return BadRequest(ModelState);
+                // No ModelState errors are available to send, so just return an empty BadRequest.
+                return BadRequest();
             }
 
-            return null;
+            return BadRequest(ModelState);
         }
 
         private class ExternalLoginData
