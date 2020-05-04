@@ -1,4 +1,5 @@
 - setup
+    - set resolution to 1080p
 	- load deck
 	- get books ready
 	- load AsyncAwaitPain in run-x branch
