@@ -2,7 +2,7 @@
     - set resolution to 1080p
 	- load deck
 	- get books ready
-	- load AsyncAwaitPain in run-x branch
+	- load AsyncAwaitPain in run-x branch  (Keith Voels - 
         - build to ensure it works
         - zoom window to 100 chars wide
 	- load BigBallOfMud 
